@@ -1,0 +1,70 @@
+################ CA ####################
+
+Скачиваем архив easyrsa
+wget -P ~/ https://github.com/OpenVPN/easy-rsa/releases/download/v3.0.4/EasyRSA-3.0.4.tgz
+tar xvf EasyRSA-3.0.4.tgz
+
+Задаём переменные
+nano vars
+. . .
+
+set_var EASYRSA_REQ_COUNTRY    "US"
+set_var EASYRSA_REQ_PROVINCE   "NewYork"
+set_var EASYRSA_REQ_CITY       "New York City"
+set_var EASYRSA_REQ_ORG        "DigitalOcean"
+set_var EASYRSA_REQ_EMAIL      "admin@example.com"
+set_var EASYRSA_REQ_OU         "Community"
+
+. . .
+
+Чтобы создать CA прописываем
+./easyrsa init-pki #запуск инфрастукруры открытых ключей
+./easyrsa build-ca nopass #создание центра сертификации
+
+################# OpenVpn Server ####################
+
+sudo apt update
+sudo apt install openvpn
+wget -P ~/ https://github.com/OpenVPN/easy-rsa/releases/download/v3.0.4/EasyRSA-3.0.4.tgz
+tar xvf EasyRSA-3.0.4.tgz
+cd EasyRSA-3.0.4
+./easyrsa init-pki #запуск инфрастукруры открытых ключей
+./easyrsa gen-req server nopass #создание закрытого ключа для сервера и файла запроса сертификата
+sudo cp ~/EasyRSA-3.0.4/pki/private/server.key /etc/openvpn/ #скопируем закрытый ключ в директорию openvpn
+scp ~/EasyRSA-3.0.4/pki/reqs/server.req sammy@your_CA_ip:/tmp #Скопируем файл запроса сертификата на центр сертификации
+
+################ CA ####################
+
+./easyrsa import-req /tmp/server.req server #Импортируем переданный впн сервером файл.
+./easyrsa sign-req server server #Подписание запроса. 1 server - тип запроса (client or server) 2 server - просто название
+scp pki/issued/server.crt sammy@your_server_ip:/tmp #Пермещяем наш подписанный сертификат обратно на Vpn сервер
+scp ~/EasyRSA-3.0.4/ca.crt sammy@your_server_ip:/tmp #Также скопируем на наш VPN сервер 
+
+################# OpenVpn Server ####################
+
+sudo cp /tmp/{server.crt,ca.crt} /etc/openvpn/ #Скопируем переданные центром сертификации файлы в диреткорию vpn сервера
+./easyrsa gen-dh # Создание надежнего ключ Диффи-Хеллмана, который будет использоваться при обмене ключами
+openvpn --genkey --secret ta.key
+sudo cp ~/EasyRSA-3.0.4/ta.key /etc/openvpn/
+sudo cp ~/EasyRSA-3.0.4/pki/dh.pem /etc/openvpn/
+
+################# Создание ключей для клиентского подключения на Vpn сервере ####################
+mkdir -p ~/client-configs/keys #Создание директории для хранения ключей
+cd ~/EasyRSA-3.0.4/
+./easyrsa gen-req client1 nopass 
+cp pki/private/client1.key ~/client-configs/keys/
+scp pki/reqs/client1.req sammy@your_CA_ip:/tmp #Подписываем наш сертификат в центре сертификации  #./easyrsa import-req /tmp/client1.req client1 #./easyrsa sign-req client client1
+scp pki/issued/client1.crt sammy@your_server_ip:/tmp #Передаём с центра сертификации обратно на впн сервер
+cp /tmp/client1.crt ~/client-configs/keys/
+cp ~/EasyRSA-3.0.4/ta.key ~/client-configs/keys/
+sudo cp /etc/openvpn/ca.crt ~/client-configs/keys/
+
+
+
+
+
+
+
+
+
+
