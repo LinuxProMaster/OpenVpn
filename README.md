@@ -12,4 +12,4 @@ route 192.168.0.0 255.255.255.0 }
 route 10.10.5.0 255.255.255.0   } Указывем маршрутизируемые сети
 Также нужно обязательно закомментить строчку:
 ;push "redirect-gateway def1 bypass-dhcp" - эта строчка указывает на то, чтобы все пакеты автоматом перенапарвлялись на наш VPN сервер
-Остальное здесь https://www.digitalocean.com/community/tutorials/openvpn-ubuntu-16-04-ru
+Остальное здесь https://www.digitalocean.com/community/tutorials/how-to-set-up-an-openvpn-server-on-ubuntu-18-04-ru
